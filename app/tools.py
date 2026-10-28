@@ -1,28 +1,56 @@
 """
-Modul Tools — fungsi-fungsi "aksi" yang dipanggil router ketika intent
+Modul Tools: fungsi "aksi" yang dipanggil router ketika intent
 BUKAN pertanyaan informasi/kebijakan, melainkan permintaan spesifik
 yang butuh pengecekan data langsung (bukan retrieval semantik).
 
 Pola ini mengikuti konsep Tool Integration di Sesi 12.3.
 """
 
+from functools import cache
+from pathlib import Path
+
 import pandas as pd
 
-MOCK_TICKETS_PATH = "data/mock_tickets.csv"
+MOCK_TICKETS_PATH = Path(__file__).resolve().parent.parent / "data" / "mock_tickets.csv"
 
 
-def get_ticket_status(ticket_id: str) -> str:
+@cache
+def _load_tickets() -> pd.DataFrame:
+    """Memuat mock_tickets.csv sekali saja. Semua kolom dibaca sebagai string."""
+    return pd.read_csv(MOCK_TICKETS_PATH, dtype=str)
+
+
+def get_ticket_status(ticket_id: str) -> dict:
     """
     Mencari status tiket berdasarkan ticket_id pada data mock_tickets.csv.
 
-    # TODO: implementasikan pencarian data tiket berdasarkan ticket_id.
-    # Jika ticket_id tidak ditemukan, kembalikan pesan yang informatif
-    # (bukan error yang membuat aplikasi crash).
-    #
-    # Contoh langkah:
-    #   1. Muat mock_tickets.csv menggunakan pandas
-    #   2. Cari baris dengan ticket_id yang cocok
-    #   3. Jika ditemukan, susun string jawaban (subject, status, last_update)
-    #   4. Jika tidak ditemukan, kembalikan pesan bahwa tiket tidak ditemukan
+    Mengembalikan {"found": bool, "message": str}. Input yang kosong atau
+    tidak dikenal tidak melempar error, hanya found=False dengan pesan.
     """
-    raise NotImplementedError("Implementasikan get_ticket_status di sini")
+    ticket_id = str(ticket_id or "").strip().upper()
+    if not ticket_id:
+        return {
+            "found": False,
+            "message": "Nomor tiket kosong. Tuliskan nomornya, contoh: TICKET-0005.",
+        }
+
+    tickets = _load_tickets()
+    matches = tickets[tickets["ticket_id"].str.strip().str.upper() == ticket_id]
+    if matches.empty:
+        return {
+            "found": False,
+            "message": (
+                f"Tiket {ticket_id} tidak ditemukan. "
+                "Periksa kembali nomor tiketnya (format TICKET-XXXX)."
+            ),
+        }
+
+    row = matches.iloc[0]
+    return {
+        "found": True,
+        "message": (
+            f"Tiket {row['ticket_id']} ({row['subject']}, kategori {row['category']}) "
+            f"atas nama {row['employee_name']} saat ini berstatus {row['status']}. "
+            f"Update terakhir: {row['last_update']}."
+        ),
+    }
