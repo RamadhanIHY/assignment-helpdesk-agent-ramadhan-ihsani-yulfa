@@ -1,0 +1,2 @@
+# simpan CSV byte-per-byte apa adanya (CRLF dari file asli), jangan dinormalisasi git
+*.csv -text

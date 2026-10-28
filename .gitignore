@@ -1,0 +1,10 @@
+# secrets
+.env
+
+# environment
+.venv/
+__pycache__/
+.pytest_cache/
+
+# catatan belajar pribadi, tidak ikut di-push
+_guide/
